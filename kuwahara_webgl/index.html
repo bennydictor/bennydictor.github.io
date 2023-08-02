@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+ <head>
+  <meta charset="utf-8">
+  <title>Anisotropic Kuwahara Filter</title>
+  <link rel="stylesheet" href="style.css"/>
+ </head>
+
+ <body>
+
+  <h1>Anisotropic Kuwahara Fi1ter</h1>
+
+  <table class="inputs">
+   <tr>
+    <td><label for="inputImage">input: </label></td>
+    <td><input id="inputImage" type="file" /></td>
+   </tr>
+   <tr>
+    <td><label for="inputScale">scale: </label></td>
+    <td><input id="inputScale" type="range" min="1" max="100" value="100" /></td>
+   </tr>
+   <tr>
+    <td><label for="inputBlurRadius">blur radius: </label></td>
+    <td><input id="inputBlurRadius" type="range" min="1" max="1000" value="100" /></td>
+   </tr>
+   <tr>
+    <td><label for="inputKernelRadius">kernel radius: </label></td>
+    <td><input id="inputKernelRadius" type="range" min="1" max="1000" value="70" /></td>
+   </tr>
+   <tr>
+    <td><label for="inputKernelSkew">kernel skew: </label></td>
+    <td><input id="inputKernelSkew" type="range" min="1" max="100" value="10" /></td>
+   </tr>
+   <tr>
+    <td><label for="inputSharpness">sharpness: </label></td>
+    <td><input id="inputSharpness" type="range" min="1" max="200" value="50" /></td>
+   </tr>
+   <tr>
+    <td colspan="2"><button id="buttonSaveFiltered">save filtered</button></td>
+   </tr>
+  </table>
+
+  <canvas id="canvas"></canvas>
+
+  <div class="images-container">
+   <table class="images">
+    <thead>
+     <tr>
+      <th>original</th>
+      <th>structure tensor</th>
+      <th>blurred structure tensor</th>
+      <th>anisotropy</th>
+      <th>filtered</th>
+     </tr>
+    </thead>
+    <tbody>
+     <tr>
+      <td><div id="imageOriginal"></div></td>
+      <td><div id="imageStructureTensor"></div></td>
+      <td><div id="imageBlurredStructureTensor"></div></td>
+      <td><div id="imageAnisotropy"></div></td>
+      <td><div id="imageFiltered"></div></td>
+     </tr>
+    </tbody>
+   </table>
+  </div>
+
+  <script src="index.js" type="text/javascript"></script>
+
+ </body>
+
+</html>
