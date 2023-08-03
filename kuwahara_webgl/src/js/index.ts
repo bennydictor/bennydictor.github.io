@@ -307,7 +307,7 @@ function recompute() {
     let blurRadius = +inputBlurRadius.value / 10;
     let kernelRadius = +inputKernelRadius.value / 10;
     const kernelSkew = +inputKernelSkew.value / 10;
-    const sharpness = +inputSharpness.value;
+    const sharpness = +inputSharpness.value / 10;
 
     inputScaleValue.innerHTML = scale.toFixed(2);
     inputBlurRadiusValue.innerHTML = blurRadius.toFixed(2);
