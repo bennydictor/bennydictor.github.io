@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+ <head>
+  <meta charset="utf-8">
+  <title>Anisotropic Kuwahara Filter</title>
+ </head>
+
+ <body>
+  <div class="container-lg py-1 py-lg-3">
+
+   <h1>Anisotropic Kuwahara Filter</h1>
+
+   <div class="p-3 border border-1 rounded">
+    <form>
+
+     <div class="row mb-2">
+      <label class="col-md-2 col-form-label" for="inputImage">Image</label>
+      <div class="col-md-10"><input class="form-control" id="inputImage" type="file" /></div>
+     </div>
+
+     <div class="row mb-2">
+      <label class="col-10 col-md-2 col-form-label" for="inputScale">Scale</label>
+      <div class="col-2 col-md-1 col-form-label" id="inputScaleValue"></div>
+      <div class="col-md-9"><input class="form-range" id="inputScale" type="range" min="1" max="100" value="100" /></div>
+     </div>
+
+     <div class="row mb-2">
+      <label class="col-10 col-md-2 col-form-label" for="inputBlurRadius">Blur radius</label>
+      <div class="col-2 col-md-1 col-form-label" id="inputBlurRadiusValue"></div>
+      <div class="col-md-9"><input class="form-range" id="inputBlurRadius" type="range" min="1" max="1000" value="100" /></div>
+     </div>
+
+     <div class="row mb-2">
+      <label class="col-10 col-md-2 col-form-label" for="inputKernelRadius">Kernel radius</label>
+      <div class="col-2 col-md-1 col-form-label" id="inputKernelRadiusValue"></div>
+      <div class="col-md-9"><input class="form-range" id="inputKernelRadius" type="range" min="1" max="1000" value="70" /></div>
+     </div>
+
+     <div class="row mb-2">
+      <label class="col-10 col-md-2 col-form-label" for="inputKernelSkew">Kernel skew</label>
+      <div class="col-2 col-md-1 col-form-label" id="inputKernelSkewValue"></div>
+      <div class="col-md-9"><input class="form-range" id="inputKernelSkew" type="range" min="1" max="100" value="10" /></div>
+     </div>
+
+     <div class="row mb-2">
+      <label class="col-10 col-md-2 col-form-label" for="inputSharpness">Sharpness</label>
+      <div class="col-2 col-md-1 col-form-label" id="inputSharpnessValue"></div>
+      <div class="col-md-9"><input class="form-range" id="inputSharpness" type="range" min="1" max="200" value="50" /></div>
+     </div>
+
+     <div class="row">
+      <div class="col-12">
+       <button class="form-control btn btn-primary" id="buttonSaveFiltered" type="button">Save filtered</button>
+      </div>
+     </div>
+
+    </form>
+   </div>
+
+   <canvas id="canvas"></canvas>
+
+   <div class="overflow-x-scroll mt-3" id="imagesContainer">
+    <table class="table">
+     <thead>
+      <tr>
+       <th scope="col">Original</th>
+       <th scope="col">Structure tensor</th>
+       <th scope="col">Blurred structure tensor</th>
+       <th scope="col">Anisotropy</th>
+       <th scope="col">Filtered</th>
+      </tr>
+     </thead>
+     <tbody>
+      <tr>
+       <td class="bg-transparent"><div id="imageOriginal"></div></td>
+       <td class="bg-transparent"><div id="imageStructureTensor"></div></td>
+       <td class="bg-transparent"><div id="imageBlurredStructureTensor"></div></td>
+       <td class="bg-transparent"><div id="imageAnisotropy"></div></td>
+       <td class="bg-transparent"><div id="imageFiltered"></div></td>
+      </tr>
+     </tbody>
+    </table>
+   </div>
+
+  </div>
+ </body>
+
+</html>

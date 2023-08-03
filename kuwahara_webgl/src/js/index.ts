@@ -1,3 +1,6 @@
+import '../scss/styles.scss'
+import 'bootstrap';
+
 const inputImage = document.getElementById("inputImage") as HTMLInputElement;
 const inputScale = document.getElementById("inputScale") as HTMLInputElement;
 const inputBlurRadius = document.getElementById("inputBlurRadius") as HTMLInputElement;
@@ -6,7 +9,13 @@ const inputKernelRadius = document.getElementById("inputKernelRadius") as HTMLIn
 const inputSharpness = document.getElementById("inputSharpness") as HTMLInputElement;
 const buttonSaveFiltered = document.getElementById("buttonSaveFiltered") as HTMLInputElement;
 
-const imagesContainer = document.querySelector(".images-container")!;
+const inputScaleValue = document.getElementById("inputScaleValue")!;
+const inputBlurRadiusValue = document.getElementById("inputBlurRadiusValue")!;
+const inputKernelSkewValue = document.getElementById("inputKernelSkewValue")!;
+const inputKernelRadiusValue = document.getElementById("inputKernelRadiusValue")!;
+const inputSharpnessValue = document.getElementById("inputSharpnessValue")!;
+
+const imagesContainer = document.getElementById("imagesContainer")!;
 const imageOriginal = document.getElementById("imageOriginal")!;
 const imageStructureTensor = document.getElementById("imageStructureTensor")!;
 const imageBlurredStructureTensor = document.getElementById("imageBlurredStructureTensor")!;
@@ -19,7 +28,7 @@ const gl = canvas.getContext("webgl2")!;
 gl.getExtension("EXT_color_buffer_float");
 
 async function createShader(type: number, name: string) {
-    const source = (await import(`./shaders/${name}.glsl`)).default as string;
+    const source = (await import(`../shaders/${name}.glsl`)).default as string;
 
     console.groupCollapsed(`${name} shader source`);
     console.log(source);
@@ -144,7 +153,7 @@ async function init() {
 
     document.addEventListener("paste", (e) => {
         for (let item of e.clipboardData!.items) {
-            if (item.kind === 'file') {
+            if (item.kind === "file") {
                 const reader = new FileReader();
                 reader.addEventListener("load", (e) => {
                     img.src = e.target!.result as string;
@@ -193,14 +202,30 @@ function loadImg() {
 }
 
 function scissorImage(image: HTMLElement) {
-    const rect = image.getBoundingClientRect();
-    const width = rect.right - rect.left;
-    const height = rect.bottom - rect.top;
-    const left = rect.left;
-    const bottom = canvas.clientHeight - rect.bottom;
+    const containerRect = imagesContainer.getBoundingClientRect();
+    const imageRect = image.getBoundingClientRect();
 
-    gl.viewport(left, bottom, width, height);
-    gl.scissor(left, bottom, width, height);
+    const scissorTop = Math.max(containerRect.top, imageRect.top);
+    const scissorLeft = Math.max(containerRect.left, imageRect.left);
+    const scissorRight = Math.min(containerRect.right, imageRect.right);
+    const scissorBottom = Math.min(containerRect.bottom, imageRect.bottom);
+
+    const scissorX = scissorLeft;
+    const scissorY = canvas.clientHeight - scissorBottom;
+    const scissorWidth = scissorRight - scissorLeft
+    const scissorHeight = scissorBottom - scissorTop;
+    if (scissorWidth <= 0 || scissorHeight <= 0) {
+        return false;
+    }
+
+    const viewportX = imageRect.left;
+    const viewportY = canvas.clientHeight - imageRect.bottom;
+    const viewportWidth = imageRect.right - imageRect.left;
+    const viewportHeight = imageRect.bottom - imageRect.top;
+
+    gl.viewport(viewportX, viewportY, viewportWidth, viewportHeight);
+    gl.scissor(scissorX, scissorY, scissorWidth, scissorHeight);
+    return true;
 }
 
 type Uniform
@@ -247,11 +272,11 @@ function runFragProgram(image: HTMLElement | WebGLTexture, program: WebGLProgram
     } else {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.enable(gl.SCISSOR_TEST);
-        scissorImage(image);
+        if (!scissorImage(image)) return;
     }
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(program);
-    const vertexPosLoc = gl.getAttribLocation(program, "vertexPos")
+    const vertexPosLoc = getAttribLocation(program, "vertexPos")
     gl.enableVertexAttribArray(vertexPosLoc);
     gl.vertexAttribPointer(vertexPosLoc, 2, gl.FLOAT, false, 0, 0);
 
@@ -279,10 +304,19 @@ function recompute() {
     const scale = +inputScale.value / 100;
     const width = Math.ceil(img.width * scale);
     const height = Math.ceil(img.height * scale);
-    const blurRadius = +inputBlurRadius.value / 10 * scale;
-    const kernelRadius = +inputKernelRadius.value / 10 * scale;
+    let blurRadius = +inputBlurRadius.value / 10;
+    let kernelRadius = +inputKernelRadius.value / 10;
     const kernelSkew = +inputKernelSkew.value / 10;
     const sharpness = +inputSharpness.value;
+
+    inputScaleValue.innerHTML = scale.toFixed(2);
+    inputBlurRadiusValue.innerHTML = blurRadius.toFixed(2);
+    inputKernelRadiusValue.innerHTML = kernelRadius.toFixed(2);
+    inputKernelSkewValue.innerHTML = kernelSkew.toFixed(2);
+    inputSharpnessValue.innerHTML = sharpness.toFixed(2);
+
+    blurRadius *= scale;
+    kernelRadius *= scale;
 
     runFragProgram(textureStructureTensor, programStructureTensor, {
         flipY: 0.0,
