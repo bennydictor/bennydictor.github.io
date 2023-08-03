@@ -236,10 +236,10 @@ type Uniform
 const attribLocCache: unique symbol = Symbol("attribLocCache");
 const uniformLocCache: unique symbol = Symbol("uniformLocCache");
 
-type WebGLProgramWithCache = WebGLProgram & Partial<{
-    [attribLocCache]: Record<string, number>,
-    [uniformLocCache]: Record<string, WebGLUniformLocation>,
-}>;
+type WebGLProgramWithCache = WebGLProgram & {
+    [attribLocCache]?: Record<string, number>,
+    [uniformLocCache]?: Record<string, WebGLUniformLocation>,
+};
 
 function getAttribLocation(program: WebGLProgramWithCache, name: string) {
     if (program[attribLocCache] === undefined) {
@@ -407,4 +407,5 @@ function render() {
     gl.flush();
 }
 
+// noinspection JSIgnoredPromiseFromCall
 init();

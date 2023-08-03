@@ -1,5 +1,32 @@
 @import "bootstrap/scss/bootstrap";
 
+.label-file {
+    @extend .col-12;
+    @extend .col-sm-2;
+}
+
+.input-file {
+    @extend .col-12;
+    @extend .col-sm-10;
+}
+
+.label-range {
+    @extend .col-6;
+    @extend .col-lg-3;
+}
+
+.label-value {
+    @extend .col-6;
+    @extend .col-lg-1;
+    text-align: right;
+    font-family: var(--bs-font-monospace);
+}
+
+.input-range {
+    @extend .col-12;
+    @extend .col-lg-8;
+}
+
 #canvas {
     position: absolute;
     top: 0;
