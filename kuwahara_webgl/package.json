@@ -1,0 +1,36 @@
+{
+  "name": "kuwahara-webgl",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "scripts": {
+    "build:prod": "webpack --mode production",
+    "build:dev": "webpack --mode development",
+    "serve:prod": "webpack serve --mode production",
+    "serve:dev": "webpack serve --mode development"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bennydictor/bennydictor.github.io.git"
+  },
+  "keywords": [
+    "webgl",
+    "kuwahara"
+  ],
+  "author": "Michael Sorokin",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bennydictor/bennydictor.github.io/issues"
+  },
+  "homepage": "https://github.com/bennydictor/bennydictor.github.io#readme",
+  "devDependencies": {
+    "@babel/core": "^7.22.9",
+    "@babel/preset-typescript": "^7.22.5",
+    "@tsconfig/recommended": "^1.0.2",
+    "babel-loader": "^9.1.3",
+    "typescript": "^5.1.6",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1"
+  }
+}

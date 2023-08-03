@@ -1,33 +1,31 @@
-const inputImage = document.getElementById("inputImage");
-const inputScale = document.getElementById("inputScale");
-const inputBlurRadius = document.getElementById("inputBlurRadius");
-const inputKernelSkew = document.getElementById("inputKernelSkew");
-const inputKernelRadius = document.getElementById("inputKernelRadius");
-const inputSharpness = document.getElementById("inputSharpness");
-const buttonSaveFiltered = document.getElementById("buttonSaveFiltered");
+const inputImage = document.getElementById("inputImage") as HTMLInputElement;
+const inputScale = document.getElementById("inputScale") as HTMLInputElement;
+const inputBlurRadius = document.getElementById("inputBlurRadius") as HTMLInputElement;
+const inputKernelSkew = document.getElementById("inputKernelSkew") as HTMLInputElement;
+const inputKernelRadius = document.getElementById("inputKernelRadius") as HTMLInputElement;
+const inputSharpness = document.getElementById("inputSharpness") as HTMLInputElement;
+const buttonSaveFiltered = document.getElementById("buttonSaveFiltered") as HTMLInputElement;
 
-const imagesContainer = document.querySelector(".images-container");
-const imageOriginal = document.getElementById("imageOriginal");
-const imageStructureTensor = document.getElementById("imageStructureTensor");
-const imageBlurredStructureTensor = document.getElementById("imageBlurredStructureTensor");
-const imageAnisotropy = document.getElementById("imageAnisotropy");
-const imageFiltered = document.getElementById("imageFiltered");
+const imagesContainer = document.querySelector(".images-container")!;
+const imageOriginal = document.getElementById("imageOriginal")!;
+const imageStructureTensor = document.getElementById("imageStructureTensor")!;
+const imageBlurredStructureTensor = document.getElementById("imageBlurredStructureTensor")!;
+const imageAnisotropy = document.getElementById("imageAnisotropy")!;
+const imageFiltered = document.getElementById("imageFiltered")!;
 
 const img = new Image();
-const canvas = document.getElementById("canvas");
-const gl = canvas.getContext("webgl2");
+const canvas = document.getElementById("canvas")! as HTMLCanvasElement;
+const gl = canvas.getContext("webgl2")!;
 gl.getExtension("EXT_color_buffer_float");
 
+async function createShader(type: number, name: string) {
+    const source = (await import(`./shaders/${name}.glsl`)).default as string;
 
-async function createShader(type, url) {
-    const resp = await fetch(url);
-    const source = await resp.text();
-
-    console.groupCollapsed(`shader source ${url}`);
+    console.groupCollapsed(`${name} shader source`);
     console.log(source);
     console.groupEnd();
 
-    const shader = gl.createShader(type);
+    const shader = gl.createShader(type)!;
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     const success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
@@ -40,8 +38,11 @@ async function createShader(type, url) {
     return shader;
 }
 
-function createProgram(vertexShader, fragmentShader, uniforms, attributes) {
-    const program = gl.createProgram();
+function createProgram(
+    vertexShader: WebGLShader,
+    fragmentShader: WebGLShader,
+) {
+    const program = gl.createProgram()!;
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
@@ -51,27 +52,16 @@ function createProgram(vertexShader, fragmentShader, uniforms, attributes) {
         gl.deleteProgram(program);
         throw infoLog;
     }
-
-    const uniformLocs = {};
-    for (let v of uniforms) {
-        uniformLocs[v] = gl.getUniformLocation(program, v);
-    }
-
-    const attributeLocs = {};
-    for (let v of attributes) {
-        attributeLocs[v] = gl.getAttribLocation(program, v);
-    }
-
-    return {p: program, u: uniformLocs, a: attributeLocs};
+    return program;
 }
 
-async function createFragProgram(fragmentShaderUrl, ...uniforms) {
+async function createFragProgram(fragmentShaderUrl: string) {
     const fragmentShader = await createShader(gl.FRAGMENT_SHADER, fragmentShaderUrl);
-    return createProgram(vertexShader, fragmentShader, uniforms, ["vertexPos"]);
+    return createProgram(vertexShader, fragmentShader);
 }
 
 function createTexture() {
-    const texture = gl.createTexture();
+    const texture = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -79,24 +69,24 @@ function createTexture() {
     return texture;
 }
 
-let positionBuffer;
-let frameBuffer;
+let positionBuffer: WebGLBuffer;
+let frameBuffer: WebGLFramebuffer;
 
-let textureOriginal;
-let textureStructureTensor;
-let textureHBlurredStructureTensor;
-let textureBlurredStructureTensor;
-let textureAnisotropy;
-let textureFiltered;
+let textureOriginal: WebGLTexture;
+let textureStructureTensor: WebGLTexture;
+let textureHBlurredStructureTensor: WebGLTexture;
+let textureBlurredStructureTensor: WebGLTexture;
+let textureAnisotropy: WebGLTexture;
+let textureFiltered: WebGLTexture;
 
-let vertexShader;
-let programCopy;
-let programStructureTensor;
-let programHBlurredStructureTensor;
-let programBlurredStructureTensor;
-let programAnisotropy;
-let programShowAnisotropy;
-let programKuwahara;
+let vertexShader: WebGLShader;
+let programCopy: WebGLProgram;
+let programStructureTensor: WebGLProgram;
+let programHBlurredStructureTensor: WebGLProgram;
+let programBlurredStructureTensor: WebGLProgram;
+let programAnisotropy: WebGLProgram;
+let programShowAnisotropy: WebGLProgram;
+let programKuwahara: WebGLProgram;
 
 async function init() {
     const vertexPositions = [
@@ -105,11 +95,11 @@ async function init() {
         +1, +1,
         +1, -1,
     ];
-    positionBuffer = gl.createBuffer();
+    positionBuffer = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositions), gl.STATIC_DRAW);
 
-    frameBuffer = gl.createFramebuffer();
+    frameBuffer = gl.createFramebuffer()!;
 
     textureOriginal = createTexture();
     textureStructureTensor = createTexture();
@@ -118,36 +108,15 @@ async function init() {
     textureAnisotropy = createTexture();
     textureFiltered = createTexture();
 
-    vertexShader = await createShader(gl.VERTEX_SHADER, "vertex.glsl");
+    vertexShader = await createShader(gl.VERTEX_SHADER, "vertex");
 
-    programCopy = await createFragProgram(
-        "copy.glsl",
-        "flipY", "tex",
-    );
-    programStructureTensor = await createFragProgram(
-        "structureTensor.glsl",
-        "flipY", "res", "original",
-    );
-    programHBlurredStructureTensor = await createFragProgram(
-        "hBlurredStructureTensor.glsl",
-        "flipY", "res", "blurRadius", "structureTensor",
-    );
-    programBlurredStructureTensor = await createFragProgram(
-        "blurredStructureTensor.glsl",
-        "flipY", "res", "blurRadius", "hBlurredStructureTensor",
-    );
-    programAnisotropy = await createFragProgram(
-        "anisotropy.glsl",
-        "flipY", "blurredStructureTensor",
-    );
-    programShowAnisotropy = await createFragProgram(
-        "showAnisotropy.glsl",
-        "flipY", "anisotropy",
-    );
-    programKuwahara = await createFragProgram(
-        "kuwahara.glsl",
-        "flipY", "res", "original", "anisotropy", "kernelRadius", "kernelSkew", "sharpness",
-    );
+    programCopy = await createFragProgram("copy");
+    programStructureTensor = await createFragProgram("structureTensor");
+    programHBlurredStructureTensor = await createFragProgram("hBlurredStructureTensor");
+    programBlurredStructureTensor = await createFragProgram("blurredStructureTensor");
+    programAnisotropy = await createFragProgram("anisotropy");
+    programShowAnisotropy = await createFragProgram("showAnisotropy");
+    programKuwahara = await createFragProgram("kuwahara");
 
     gl.clearColor(0, 0, 0, 0);
 
@@ -164,22 +133,23 @@ async function init() {
     window.addEventListener("scroll", render);
     window.addEventListener("resize", render);
 
-    function onInputImage() {
-        if (inputImage.files.length >= 1) {
-            img.src = URL.createObjectURL(inputImage.files[0]);
+    function onInputImage(): void {
+        const files = inputImage.files!;
+        if (files.length >= 1) {
+            img.src = URL.createObjectURL(files[0]);
         }
     }
     inputImage.addEventListener("change", onInputImage);
     onInputImage()
 
     document.addEventListener("paste", (e) => {
-        for (let item of e.clipboardData.items) {
+        for (let item of e.clipboardData!.items) {
             if (item.kind === 'file') {
                 const reader = new FileReader();
                 reader.addEventListener("load", (e) => {
-                    img.src = e.target.result;
+                    img.src = e.target!.result as string;
                 });
-                reader.readAsDataURL(item.getAsFile());
+                reader.readAsDataURL(item.getAsFile()!);
                 return;
             }
         }
@@ -187,12 +157,12 @@ async function init() {
 }
 
 
-function resizeImage(image, width, height) {
+function resizeImage(image: HTMLElement, width: number, height: number) {
     image.style.width = `${width}px`;
     image.style.height = `${height}px`;
 }
 
-let width, height;
+let width: number, height: number;
 
 function loadImg() {
     const scale = +inputScale.value / 100;
@@ -222,18 +192,53 @@ function loadImg() {
     recompute();
 }
 
-function scissorImage(image) {
+function scissorImage(image: HTMLElement) {
     const rect = image.getBoundingClientRect();
     const width = rect.right - rect.left;
     const height = rect.bottom - rect.top;
     const left = rect.left;
-    const bottom = gl.canvas.clientHeight - rect.bottom;
+    const bottom = canvas.clientHeight - rect.bottom;
 
     gl.viewport(left, bottom, width, height);
     gl.scissor(left, bottom, width, height);
 }
 
-function runFragProgram(image, program, uniforms) {
+type Uniform
+    = WebGLTexture
+    | number
+    | [number, number];
+
+const attribLocCache: unique symbol = Symbol("attribLocCache");
+const uniformLocCache: unique symbol = Symbol("uniformLocCache");
+
+type WebGLProgramWithCache = WebGLProgram & Partial<{
+    [attribLocCache]: Record<string, number>,
+    [uniformLocCache]: Record<string, WebGLUniformLocation>,
+}>;
+
+function getAttribLocation(program: WebGLProgramWithCache, name: string) {
+    if (program[attribLocCache] === undefined) {
+        program[attribLocCache] = {};
+    }
+    const cache = program[attribLocCache];
+    if (!(name in cache)) {
+        cache[name] = gl.getAttribLocation(program, name);
+    }
+    return cache[name];
+}
+
+function getUniformLocation(program: WebGLProgramWithCache, name: string) {
+    if (program[uniformLocCache] === undefined) {
+        program[uniformLocCache] = {};
+    }
+    const cache = program[uniformLocCache];
+    if (!(name in cache)) {
+        cache[name] = gl.getUniformLocation(program, name)!;
+    }
+    return cache[name];
+}
+
+function runFragProgram(image: HTMLElement | WebGLTexture, program: WebGLProgram, uniforms: Record<string, Uniform>) {
     if (image instanceof WebGLTexture) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, image, 0);
@@ -245,22 +250,24 @@ function runFragProgram(image, program, uniforms) {
         scissorImage(image);
     }
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(program.p);
-    gl.enableVertexAttribArray(program.a.vertexPos);
-    gl.vertexAttribPointer(program.a.vertexPos, 2, gl.FLOAT, false, 0, 0);
+    gl.useProgram(program);
+    const vertexPosLoc = gl.getAttribLocation(program, "vertexPos")
+    gl.enableVertexAttribArray(vertexPosLoc);
+    gl.vertexAttribPointer(vertexPosLoc, 2, gl.FLOAT, false, 0, 0);
+
     let texI = 0;
     for (let name in uniforms) {
-        if (uniforms[name] instanceof WebGLTexture) {
-            gl.uniform1i(program.u[name], texI);
+        const loc = getUniformLocation(program, name);
+        const value = uniforms[name];
+        if (value instanceof WebGLTexture) {
+            gl.uniform1i(loc, texI);
             gl.activeTexture(gl.TEXTURE0+texI);
-            gl.bindTexture(gl.TEXTURE_2D, uniforms[name]);
+            gl.bindTexture(gl.TEXTURE_2D, value);
             texI++;
-        } else if (typeof uniforms[name] === "number") {
-            gl.uniform1f(program.u[name], uniforms[name]);
-        } else if (uniforms[name].length === 2) {
-            gl.uniform2f(program.u[name], uniforms[name][0], uniforms[name][1]);
+        } else if (typeof value === "number") {
+            gl.uniform1f(loc, value);
         } else {
-            throw new TypeError("bad uniform type");
+            gl.uniform2f(loc, value[0], value[1]);
         }
     }
     gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
@@ -318,7 +325,7 @@ async function saveFiltered() {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textureFiltered, 0);
 
     const filteredImg = new OffscreenCanvas(width, height);
-    const ctx = filteredImg.getContext("2d");
+    const ctx = filteredImg.getContext("2d")!;
     const imageData = ctx.createImageData(width, height);
     gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, imageData.data);
     ctx.putImageData(imageData, 0, 0);
@@ -327,8 +334,9 @@ async function saveFiltered() {
     const link = document.createElement("a");
     link.href = url;
     let downloadName = "filtered.png";
-    if (inputImage.files.length > 0) {
-        downloadName = inputImage.files[0].name.replace(/\.[a-z0-9]+$/i, "") + " filtered.png";
+    const files = inputImage.files!;
+    if (files.length > 0) {
+        downloadName = files[0].name.replace(/\.[a-z0-9]+$/i, "") + " filtered.png";
     }
     link.download = downloadName;
     link.click();
