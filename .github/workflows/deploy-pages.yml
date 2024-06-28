@@ -65,6 +65,18 @@ jobs:
           name: kuwahara_webgl
           path: kuwahara_webgl/dist
 
+  build_student_life:
+    name: Build Student Life
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: student_life
+          path: student_life
+
   bundle:
     name: Bundle Github Pages
     runs-on: ubuntu-latest
@@ -72,6 +84,7 @@ jobs:
       - build_index_html
       - build_kuwahara_opencv
       - build_kuwahara_webgl
+      - build_student_life
     steps:
       - name: Download index.html
         uses: actions/download-artifact@v3
@@ -92,6 +105,11 @@ jobs:
         with:
           name: kuwahara_webgl
           path: _site/kuwahara_webgl
+      - name: Download Student Life
+        uses: actions/download-artifact@v3
+        with:
+          name: student_life
+          path: _site/student_life
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
 
