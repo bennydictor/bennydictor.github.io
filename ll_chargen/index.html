@@ -532,7 +532,7 @@
         primary_abilities: ["dex"],
         hit_die: 4,
         level10_hp_bonus: 2,
-        is_weapon_allowed: w => w.small == "true",
+        is_weapon_allowed: () => true,
         is_armor_allowed: a => a.leather == "true",
         is_shield_allowed: false,
         saving_throws: (level) => {
