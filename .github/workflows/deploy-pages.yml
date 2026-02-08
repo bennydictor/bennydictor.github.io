@@ -24,7 +24,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: index_html
           path: index.html
@@ -36,7 +36,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: kuwahara_opencv
           path: kuwahara_opencv
@@ -60,7 +60,7 @@ jobs:
         run: npm run build:prod
         working-directory: kuwahara_webgl
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: kuwahara_webgl
           path: kuwahara_webgl/dist
@@ -72,10 +72,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: student_life
           path: student_life
+
+  build_ll_chargen:
+    name: Build Labyrinth Lord Character Generator
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ll_chargen
+          path: ll_chargen
 
   bundle:
     name: Bundle Github Pages
@@ -85,9 +97,10 @@ jobs:
       - build_kuwahara_opencv
       - build_kuwahara_webgl
       - build_student_life
+      - build_ll_chargen
     steps:
       - name: Download index.html
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: index_html
           path: index_html
@@ -96,22 +109,27 @@ jobs:
           mkdir -p _site
           mv index_html/index.html _site
       - name: Download Kuwahara OpenCV
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: kuwahara_opencv
           path: _site/kuwahara_opencv
       - name: Download Kuwahara WebGL
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: kuwahara_webgl
           path: _site/kuwahara_webgl
       - name: Download Student Life
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: student_life
           path: _site/student_life
+      - name: Download Labyrinth Lord Character Generator
+        uses: actions/download-artifact@v4
+        with:
+          name: ll_chargen
+          path: _site/ll_chargen
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
 
   deploy:
     name: Deploy to Github Pages
@@ -123,4 +141,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
+        uses: actions/deploy-pages@v4
