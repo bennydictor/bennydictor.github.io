@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Labyrinth Lord Character Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body,
+    input,
+    button,
+    select {
+      font-family: monospace;
+    }
+
+    input[type="number"] {
+      width: 4rem;
+    }
+
+    .tooltip {
+      position: relative;
+      display: inline-block;
+      border-bottom: 1px dotted black;
+      cursor: pointer;
+    }
+
+    .tooltip-text {
+      background-color: black;
+      color: white;
+      padding: 0.3rem;
+      border-radius: 0.3rem;
+      width: 25rem;
+
+      visibility: hidden;
+      position: absolute;
+      top: -0.3rem;
+      z-index: 1;
+    }
+
+    .tooltip:hover .tooltip-text {
+      visibility: visible;
+    }
+
+    .shop-container {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+
+    .shop-table {
+      font-size: small;
+      min-width: 480px;
+    }
+
+    .shop-table table {
+      min-width: 100%;
+    }
+
+    .shop-table td {
+      padding: 0 0.25rem;
+    }
+
+    tr[data-ammo] td:first-child::before {
+      content: "\00a0\00a0";
+    }
+
+    table.rolls {
+      border-collapse: collapse;
+    }
+
+    table.rolls th,
+    table.rolls td {
+      font-size: small;
+      padding: 0 0.25rem;
+      border-left: 1px solid black;
+      border-right: 1px solid black;
+      width: 1.75rem;
+    }
+  </style>
+</head>
+
+<body>
+  <script type="text/javascript">
+    function roll(n, d) {
+      let result = 0;
+      for (let i = 0; i < n; i++) {
+        result += 1 + Math.floor(d * Math.random());
+      }
+      return result;
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function plusMinus(n) {
+      if (n <= 0) {
+        return `${n}`;
+      } else {
+        return `+${n}`;
+      }
+    }
+
+    function count(n) {
+      if (n == 1) {
+        return "";
+      } else {
+        return `${n} x `;
+      }
+    }
+
+    function parseCost(s) {
+      if (s == "nil") {
+        return 0;
+      }
+      if (s.indexOf(" cp") != -1) {
+        return parseInt(s.replace(" cp", ""));
+      } else if (s.indexOf(" sp") != -1) {
+        return parseInt(s.replace(" sp", "")) * 10;
+      } else if (s.indexOf(" ep") != -1) {
+        return parseInt(s.replace(" sp", "")) * 50;
+      } else if (s.indexOf(" gp") != -1) {
+        return parseInt(s.replace(" gp", "")) * 100;
+      } else {
+        throw new Error("unknown coin");
+      }
+    }
+
+    function parseWeight(s) {
+      if (s == "nil") {
+        return 0;
+      }
+      s = s.replace(" lb.", "");
+      if (s == "1/2") {
+        return 0.5;
+      }
+      return parseInt(s);
+    }
+
+    var STATS = ["str", "dex", "con", "int", "wis", "cha"];
+
+    var CLASSES = {
+      cleric: {
+        id: "cleric",
+        name: "Cleric",
+        stat_requirements: {},
+        primary_abilities: ["wis"],
+        hit_die: 6,
+        level10_hp_bonus: 1,
+        is_weapon_allowed: w => w.blunt == "true",
+        is_armor_allowed: () => true,
+        is_shield_allowed: true,
+        saving_throws: (level) => {
+          if (level <= 4) {
+            return [16, 11, 14, 12, 15];
+          } else if (level <= 8) {
+            return [14, 9, 12, 10, 12];
+          } else if (level <= 12) {
+            return [12, 7, 10, 8, 9];
+          } else if (level <= 16) {
+            return [8, 3, 8, 4, 6];
+          } else {
+            return [6, 2, 6, 4, 5];
+          }
+        },
+        hit_modifier: (level) => {
+          if (level <= 3) {
+            return 1;
+          } else if (level <= 5) {
+            return 2;
+          } else if (level <= 8) {
+            return 3;
+          } else if (level <= 10) {
+            return 4;
+          } else if (level <= 11) {
+            return 5;
+          } else if (level <= 12) {
+            return 6;
+          } else if (level <= 14) {
+            return 7;
+          } else if (level <= 16) {
+            return 8;
+          } else if (level <= 18) {
+            return 9;
+          } else if (level <= 20) {
+            return 10;
+          } else {
+            return 11;
+          }
+        },
+        languages: [],
+        abilities: (level) => {
+          let table = `<table class="rolls"><tr><th>Undead&nbsp;HD</th>`;
+          for (let i = 1; i < 10; i++) {
+            table += `<td>${i}</td>`;
+          }
+          table += `<td>Infernal</td></tr><tr><th>2d6</th>`
+          for (let i = 1; i <= 10; i++) {
+            const roll = 7 + (i - level) * 2;
+            table += `<td>${roll > 12 ? "-" : roll <= -3 ? "D" : roll <= 1 ? "T" : roll}</td>`;
+          }
+          table += `</tr></table>`;
+          return ["Turn undead" + table];
+        },
+      },
+      dwarf: {
+        id: "dwarf",
+        name: "Dwarf",
+        stat_requirements: { con: 9 },
+        primary_abilities: ["str"],
+        hit_die: 8,
+        max_level: 12,
+        level10_hp_bonus: 3,
+        // TODO: allowed to use bows?
+        is_weapon_allowed: w => w.id == "shortbow" || w.two_handed != "true",
+        is_armor_allowed: () => true,
+        is_shield_allowed: true,
+        saving_throws: (level) => {
+          if (level <= 3) {
+            return [13, 8, 10, 9, 12];
+          } else if (level <= 6) {
+            return [10, 6, 8, 7, 10];
+          } else if (level <= 9) {
+            return [7, 4, 6, 5, 8];
+          } else {
+            return [4, 2, 4, 3, 6];
+          }
+        },
+        hit_modifier: (level) => {
+          if (level <= 2) {
+            return 1;
+          } else if (level <= 3) {
+            return 2;
+          } else if (level <= 4) {
+            return 3;
+          } else if (level <= 5) {
+            return 4;
+          } else if (level <= 6) {
+            return 5;
+          } else if (level <= 8) {
+            return 6;
+          } else if (level <= 9) {
+            return 7;
+          } else if (level <= 11) {
+            return 8;
+          } else if (level <= 12) {
+            return 9;
+          } else if (level <= 13) {
+            return 10;
+          } else if (level <= 14) {
+            return 11;
+          } else if (level <= 15) {
+            return 12;
+          } else if (level <= 16) {
+            return 13;
+          } else if (level <= 17) {
+            return 14;
+          } else if (level <= 18) {
+            return 15;
+          } else {
+            return 16;
+          }
+        },
+        languages: ["dwarvish", "goblin", "gnome", "kobold"],
+        abilities: (level) => {
+          return [
+            "Infravision 60'",
+            "Detect traps and hidden doors on 1&ndash;2",
+          ];
+        },
+      },
+      elf: {
+        id: "elf",
+        name: "Elf",
+        stat_requirements: { int: 9 },
+        primary_abilities: ["str", "int"],
+        hit_die: 6,
+        max_level: 10,
+        level10_hp_bonus: 2,
+        is_weapon_allowed: () => true,
+        is_armor_allowed: () => true,
+        is_shield_allowed: true,
+        saving_throws: (level) => {
+          if (level <= 3) {
+            return [15, 12, 13, 13, 15];
+          } else if (level <= 6) {
+            return [13, 10, 11, 11, 13];
+          } else if (level <= 9) {
+            return [9, 8, 9, 9, 11];
+          } else {
+            return [7, 6, 7, 7, 9];
+          }
+        },
+        hit_modifier: (level) => {
+          if (level <= 2) {
+            return 1;
+          } else if (level <= 3) {
+            return 2;
+          } else if (level <= 4) {
+            return 3;
+          } else if (level <= 5) {
+            return 4;
+          } else if (level <= 6) {
+            return 5;
+          } else if (level <= 8) {
+            return 6;
+          } else if (level <= 9) {
+            return 7;
+          } else if (level <= 11) {
+            return 8;
+          } else if (level <= 12) {
+            return 9;
+          } else if (level <= 13) {
+            return 10;
+          } else if (level <= 14) {
+            return 11;
+          } else if (level <= 15) {
+            return 12;
+          } else if (level <= 16) {
+            return 13;
+          } else if (level <= 17) {
+            return 14;
+          } else if (level <= 18) {
+            return 15;
+          } else {
+            return 16;
+          }
+        },
+        languages: ["elvish", "gnoll", "hobgoblin", "orc"],
+        abilities: (level) => {
+          return [
+            "Infravision 60'",
+            "Detect hidden doors on 1&ndash;2",
+            "Immunity to ghoul paralysis",
+          ];
+        },
+      },
+      fighter: {
+        id: "fighter",
+        name: "Fighter",
+        stat_requirements: {},
+        primary_abilities: ["str"],
+        hit_die: 8,
+        level10_hp_bonus: 2,
+        is_weapon_allowed: () => true,
+        is_armor_allowed: () => true,
+        is_shield_allowed: true,
+        saving_throws: (level) => {
+          if (level <= 3) {
+            return [15, 12, 14, 13, 16];
+          } else if (level <= 6) {
+            return [13, 10, 12, 11, 14];
+          } else if (level <= 9) {
+            return [9, 8, 10, 9, 12];
+          } else if (level <= 12) {
+            return [7, 6, 8, 7, 10];
+          } else if (level <= 15) {
+            return [5, 4, 6, 5, 8];
+          } else if (level <= 18) {
+            return [4, 4, 5, 4, 7];
+          } else {
+            return [4, 3, 4, 3, 6];
+          }
+        },
+        hit_modifier: (level) => {
+          if (level <= 2) {
+            return 1;
+          } else if (level <= 3) {
+            return 2;
+          } else if (level <= 4) {
+            return 3;
+          } else if (level <= 5) {
+            return 4;
+          } else if (level <= 6) {
+            return 5;
+          } else if (level <= 8) {
+            return 6;
+          } else if (level <= 9) {
+            return 7;
+          } else if (level <= 11) {
+            return 8;
+          } else if (level <= 12) {
+            return 9;
+          } else if (level <= 13) {
+            return 10;
+          } else if (level <= 14) {
+            return 11;
+          } else if (level <= 15) {
+            return 12;
+          } else if (level <= 16) {
+            return 13;
+          } else if (level <= 17) {
+            return 14;
+          } else if (level <= 18) {
+            return 15;
+          } else {
+            return 16;
+          }
+        },
+        languages: [],
+        abilities: (level) => {
+          const additionalAttacks = Math.max(0, Math.min(3, Math.floor(level / 5) - 2));
+          if (additionalAttacks > 0) {
+            return [
+              `Attack ${additionalAttacks + 1} times every round`,
+            ];
+          }
+          return [];
+        },
+      },
+      halfling: {
+        id: "halfling",
+        name: "Halfling",
+        stat_requirements: { dex: 9, con: 9 },
+        primary_abilities: ["str", "dex"],
+        hit_die: 6,
+        max_level: 8,
+        is_weapon_allowed: w => w.small == "true",
+        is_armor_allowed: () => true,
+        is_shield_allowed: true,
+        saving_throws: (level) => {
+          if (level <= 3) {
+            return [13, 8, 10, 9, 12];
+          } else if (level <= 6) {
+            return [10, 6, 8, 7, 10];
+          } else {
+            return [7, 4, 6, 5, 8];
+          }
+        },
+        hit_modifier: (level, ranged) => {
+          const ranged_mod = ranged == "true" ? 1 : 0;
+          if (level <= 2) {
+            return ranged_mod + 1;
+          } else if (level <= 3) {
+            return ranged_mod + 2;
+          } else if (level <= 4) {
+            return ranged_mod + 3;
+          } else if (level <= 5) {
+            return ranged_mod + 4;
+          } else if (level <= 6) {
+            return ranged_mod + 5;
+          } else if (level <= 8) {
+            return ranged_mod + 6;
+          } else if (level <= 9) {
+            return ranged_mod + 7;
+          } else if (level <= 11) {
+            return ranged_mod + 8;
+          } else if (level <= 12) {
+            return ranged_mod + 9;
+          } else if (level <= 13) {
+            return ranged_mod + 10;
+          } else if (level <= 14) {
+            return ranged_mod + 11;
+          } else if (level <= 15) {
+            return ranged_mod + 12;
+          } else if (level <= 16) {
+            return ranged_mod + 13;
+          } else if (level <= 17) {
+            return ranged_mod + 14;
+          } else if (level <= 18) {
+            return ranged_mod + 15;
+          } else {
+            return ranged_mod + 16;
+          }
+        },
+        languages: [],
+        abilities: (level) => {
+          return [
+            "Hide in wilderness with 90% chance",
+            "Hide in shadows on 1&ndash;2 if silent and motionless",
+            "-2 AC when attacked by creature larger than a human",
+          ];
+        },
+      },
+      magic_user: {
+        id: "magic_user",
+        name: "Magic-User",
+        stat_requirements: {},
+        primary_abilities: ["int"],
+        hit_die: 4,
+        level10_hp_bonus: 1,
+        is_weapon_allowed: w => w.small == "true",
+        is_armor_allowed: () => false,
+        is_shield_allowed: false,
+        saving_throws: (level) => {
+          if (level <= 5) {
+            return [16, 13, 13, 13, 14];
+          } else if (level <= 10) {
+            return [14, 11, 11, 11, 12];
+          } else if (level <= 15) {
+            return [12, 9, 9, 9, 8];
+          } else if (level <= 18) {
+            return [8, 7, 6, 5, 6];
+          } else {
+            return [7, 6, 5, 4, 4];
+          }
+        },
+        hit_modifier: (level) => {
+          if (level <= 3) {
+            return 1;
+          } else if (level <= 7) {
+            return 2;
+          } else if (level <= 10) {
+            return 3;
+          } else if (level <= 12) {
+            return 4;
+          } else if (level <= 13) {
+            return 5;
+          } else if (level <= 15) {
+            return 6;
+          } else if (level <= 18) {
+            return 7;
+          } else if (level <= 20) {
+            return 8;
+          } else if (level <= 23) {
+            return 9;
+          } else {
+            return 10;
+          }
+        },
+        languages: [],
+        abilities: (level) => {
+          return [];
+        },
+      },
+      thief: {
+        id: "thief",
+        name: "Thief",
+        stat_requirements: {},
+        primary_abilities: ["dex"],
+        hit_die: 4,
+        level10_hp_bonus: 2,
+        is_weapon_allowed: w => w.small == "true",
+        is_armor_allowed: a => a.leather == "true",
+        is_shield_allowed: false,
+        saving_throws: (level) => {
+          if (level <= 4) {
+            return [16, 14, 13, 15, 14];
+          } else if (level <= 8) {
+            return [14, 12, 11, 13, 12];
+          } else if (level <= 12) {
+            return [12, 10, 9, 11, 10];
+          } else if (level <= 16) {
+            return [10, 8, 7, 9, 8];
+          } else {
+            return [8, 6, 5, 7, 6];
+          }
+        },
+        hit_modifier: (level) => {
+          if (level <= 3) {
+            return 1;
+          } else if (level <= 5) {
+            return 2;
+          } else if (level <= 8) {
+            return 3;
+          } else if (level <= 10) {
+            return 4;
+          } else if (level <= 11) {
+            return 5;
+          } else if (level <= 12) {
+            return 6;
+          } else if (level <= 14) {
+            return 7;
+          } else if (level <= 16) {
+            return 8;
+          } else if (level <= 18) {
+            return 9;
+          } else if (level <= 20) {
+            return 10;
+          } else {
+            return 11;
+          }
+        },
+        languages: [],
+        abilities: (level) => {
+          let pickLocksChance, trapsChance, pickPocketsChance, moveSilentlyChance, climbWallsChance, hideInShadowsChance, hearNoiseChance;
+          if (level == 1) {
+            pickLocksChance = 17;
+            trapsChance = 14;
+            pickPocketsChance = 23;
+            moveSilentlyChance = 23;
+            climbWallsChance = 87;
+            hideInShadowsChance = 13;
+            hearNoiseChance = "1&ndash;2";
+          } else if (level == 2) {
+            pickLocksChance = 23;
+            trapsChance = 17;
+            pickPocketsChance = 27;
+            moveSilentlyChance = 27;
+            climbWallsChance = 88;
+            hideInShadowsChance = 17;
+            hearNoiseChance = "1&ndash;2";
+          } else if (level == 3) {
+            pickLocksChance = 27;
+            trapsChance = 20;
+            pickPocketsChance = 30;
+            moveSilentlyChance = 30;
+            climbWallsChance = 89;
+            hideInShadowsChance = 20;
+            hearNoiseChance = "1&ndash;3";
+          } else if (level == 4) {
+            pickLocksChance = 31;
+            trapsChance = 23;
+            pickPocketsChance = 37;
+            moveSilentlyChance = 37;
+            climbWallsChance = 90;
+            hideInShadowsChance = 27;
+            hearNoiseChance = "1&ndash;3";
+          } else if (level == 5) {
+            pickLocksChance = 35;
+            trapsChance = 33;
+            pickPocketsChance = 40;
+            moveSilentlyChance = 40;
+            climbWallsChance = 91;
+            hideInShadowsChance = 30;
+            hearNoiseChance = "1&ndash;3";
+          } else if (level == 6) {
+            pickLocksChance = 45;
+            trapsChance = 43;
+            pickPocketsChance = 43;
+            moveSilentlyChance = 43;
+            climbWallsChance = 92;
+            hideInShadowsChance = 37;
+            hearNoiseChance = "1&ndash;4";
+          } else if (level == 7) {
+            pickLocksChance = 55;
+            trapsChance = 53;
+            pickPocketsChance = 53;
+            moveSilentlyChance = 53;
+            climbWallsChance = 93;
+            hideInShadowsChance = 47;
+            hearNoiseChance = "1&ndash;4";
+          } else if (level == 8) {
+            pickLocksChance = 65;
+            trapsChance = 63;
+            pickPocketsChance = 63;
+            moveSilentlyChance = 63;
+            climbWallsChance = 94;
+            hideInShadowsChance = 57;
+            hearNoiseChance = "1&ndash;4";
+          } else if (level == 9) {
+            pickLocksChance = 75;
+            trapsChance = 73;
+            pickPocketsChance = 73;
+            moveSilentlyChance = 73;
+            climbWallsChance = 95;
+            hideInShadowsChance = 67;
+            hearNoiseChance = "1&ndash;4";
+          } else if (level == 10) {
+            pickLocksChance = 85;
+            trapsChance = 83;
+            pickPocketsChance = 83;
+            moveSilentlyChance = 83;
+            climbWallsChance = 96;
+            hideInShadowsChance = 77;
+            hearNoiseChance = "1&ndash;5";
+          } else if (level == 11) {
+            pickLocksChance = 95;
+            trapsChance = 93;
+            pickPocketsChance = 93;
+            moveSilentlyChance = 93;
+            climbWallsChance = 97;
+            hideInShadowsChance = 87;
+            hearNoiseChance = "1&ndash;5";
+          } else if (level == 12) {
+            pickLocksChance = 97;
+            trapsChance = 95;
+            pickPocketsChance = 105;
+            moveSilentlyChance = 95;
+            climbWallsChance = 98;
+            hideInShadowsChance = 90;
+            hearNoiseChance = "1&ndash;5";
+          } else if (level == 13) {
+            pickLocksChance = 99;
+            trapsChance = 97;
+            pickPocketsChance = 115;
+            moveSilentlyChance = 97;
+            climbWallsChance = 99;
+            hideInShadowsChance = 97;
+            hearNoiseChance = "1&ndash;5";
+          } else {
+            pickLocksChance = 99;
+            trapsChance = 99;
+            pickPocketsChance = 125;
+            moveSilentlyChance = 99;
+            climbWallsChance = 99;
+            hideInShadowsChance = 99;
+            hearNoiseChance = "1&ndash;5";
+          }
+          let result = [
+            "Backstab: +4 to attack and double damage on an unaware opponent",
+            `Pick locks with ${pickLocksChance}% chance (requires thieve's tools)`,
+            `Find and remove traps with ${trapsChance}% chance`,
+            `Pick pockets with ${pickPocketsChance}% chance (see pp. 13)`,
+            `Move silently with ${moveSilentlyChance}% chance`,
+            `Climb walls with ${climbWallsChance}% chance for each 100'`,
+            `Hide in shadows with ${hideInShadowsChance}% chance`,
+            `Hear noise on ${hearNoiseChance}`,
+          ];
+          if (level >= 4) {
+            result.push("Read languages (non-magical) with 80% chance");
+          }
+          if (level >= 10) {
+            result.push("Cast magic from magic-user scrolls with 90% chance");
+          }
+          return result;
+        },
+      },
+    };
+
+    function getClass() {
+      const classId = document.getElementById("class").value;
+      return CLASSES[classId];
+    }
+
+    function getLevel() {
+      return parseInt(document.getElementById("level").value);
+    }
+
+    function getAlignment() {
+      return document.getElementById("alignment").value;
+    }
+
+    function getAbilities() {
+      let result = {};
+      for (const stat of STATS) {
+        result[stat] = parseInt(document.getElementById(stat).value);
+      }
+      return result;
+    }
+
+    function getAbilityModifiers() {
+      const abilities = getAbilities();
+      let result = {};
+      for (let stat of STATS) {
+        if (abilities[stat] <= 3) {
+          result[stat] = -3;
+        } else if (abilities[stat] <= 5) {
+          result[stat] = -2;
+        } else if (abilities[stat] <= 8) {
+          result[stat] = -1;
+        } else if (abilities[stat] <= 12) {
+          result[stat] = 0;
+        } else if (abilities[stat] <= 15) {
+          result[stat] = 1;
+        } else if (abilities[stat] <= 17) {
+          result[stat] = 2;
+        } else {
+          result[stat] = 3;
+        }
+      }
+      return result;
+    }
+
+    function getHitPoints() {
+      return parseInt(document.getElementById("hit_points").value);
+    }
+
+    function getWeapons() {
+      let result = [];
+      for (const row of document.querySelectorAll("tr[data-weapon]")) {
+        const id = row.getAttribute("data-weapon");
+        let weapon = {
+          id,
+          name: row.children[0].innerText,
+          cost: parseCost(row.children[1].innerText),
+          damage: row.children[2].innerText,
+          weight: parseWeight(row.children[3].innerText),
+          count: parseInt(row.children[4].children[0].value),
+          small: row.getAttribute("data-weapon-small") ?? "false",
+          two_handed: row.getAttribute("data-weapon-two-handed") ?? "false",
+          blunt: row.getAttribute("data-weapon-blunt") ?? "false",
+          ranged: row.getAttribute("data-weapon-ranged") ?? "false",
+          short_range: parseInt(row.getAttribute("data-weapon-short-range")),
+          medium_range: parseInt(row.getAttribute("data-weapon-medium-range")),
+          long_range: parseInt(row.getAttribute("data-weapon-long-range")),
+        };
+        const ammoId = row.getAttribute("data-weapon-ammo");
+        if (ammoId != null) {
+          weapon.ammo = getAmmo(ammoId);
+          weapon.total_cost = weapon.cost + weapon.ammo.cost;
+          weapon.total_weight = weapon.weight + weapon.ammo.weight;
+        } else {
+          weapon.total_cost = weapon.cost;
+          weapon.total_weight = weapon.weight;
+        }
+        result.push(weapon);
+      }
+      return result;
+    }
+
+    function getAmmo(id) {
+      const el = document.querySelector(`tr[data-ammo="${id}"]`)
+      return {
+        id,
+        name: el.children[0].innerText,
+        cost: parseCost(el.children[1].innerText),
+        weight: parseWeight(el.children[3].innerText),
+        count: parseInt(el.children[4].children[0].value),
+      };
+    }
+
+    function getAmmos(id) {
+      let result = [];
+      for (const row of document.querySelectorAll("tr[data-ammo]")) {
+        const id = row.getAttribute("data-ammo");
+        result.push({
+          id,
+          name: row.children[0].innerText,
+          cost: parseCost(row.children[1].innerText),
+          weight: parseWeight(row.children[3].innerText),
+          count: parseInt(row.children[4].children[0].value),
+        });
+      }
+      return result;
+    }
+
+    function getArmors() {
+      let result = [];
+      for (const row of document.querySelectorAll("tr[data-armor]")) {
+        const id = row.getAttribute("data-armor");
+        result.push({
+          id,
+          name: row.children[0].innerText,
+          cost: parseCost(row.children[1].innerText),
+          armor_class: parseInt(row.children[2].innerText),
+          weight: parseWeight(row.children[3].innerText),
+          count: parseInt(row.children[4].children[0].value),
+          leather: row.getAttribute("data-weapon-leather") ?? "false",
+        });
+      }
+      return result;
+    }
+
+    function getItems() {
+      let result = [];
+      for (const row of document.querySelectorAll("tr[data-item3]")) {
+        const id = row.getAttribute("data-item3");
+        result.push({
+          id,
+          name: row.children[0].innerText,
+          cost: parseCost(row.children[1].innerText),
+          weight: parseWeight(row.children[3].innerText),
+          count: parseInt(row.children[4].children[0].value),
+        });
+      }
+      return result;
+    }
+
+    function getBestEquippedArmor() {
+      const armors = getArmors().filter(a => a.count > 0);
+      const bestArmorClass = armors.map(a => a.armor_class).reduce((a, b) => Math.min(a, b), 9);
+      return armors.find(a => a.armor_class == bestArmorClass);
+    }
+
+    function getEquippedShield() {
+      return getItems().find(i => i.id == "shield" && i.count > 0);
+    }
+
+    function getRemainingMoney() {
+      let money = 100 * parseInt(document.getElementById("starting_gold").value);
+      for (const item of [...getWeapons(), ...getAmmos(), ...getArmors(), ...getItems()]) {
+        money -= item.cost * item.count;
+      }
+      return money;
+    }
+
+    function getRemainingCoins() {
+      let money = getRemainingMoney();
+      const pp = Math.floor(money / 1000);
+      money %= 1000;
+      const gp = Math.floor(money / 100);
+      money %= 100;
+      const ep = Math.floor(money / 50);
+      money %= 50;
+      const sp = Math.floor(money / 10);
+      money % 10;
+      const cp = money;
+      return { pp, gp, ep, sp, cp };
+    }
+
+    function getTotalWeight() {
+      let weight = 0;
+      for (const item of [...getWeapons(), ...getAmmos(), ...getArmors(), ...getItems()]) {
+        weight += item.weight * item.count;
+      }
+      for (const count of Object.values(getRemainingCoins())) {
+        weight += count / 10;
+      }
+      return weight;
+    }
+
+    function getMovementSpeed() {
+      const weight = getTotalWeight();
+      if (weight <= 40) {
+        return 40;
+      } else if (weight <= 60) {
+        return 30;
+      } else if (weight <= 80) {
+        return 20;
+      } else if (weight <= 160) {
+        return 10;
+      } else {
+        return 0;
+      }
+    }
+
+    function getLoadouts() {
+      const armor = getBestEquippedArmor();
+      const shield = getEquippedShield();
+      const result = getWeapons().filter(w => w.count > 0).map(w => { return { main_hand: w }; })
+        .flatMap(loadout => {
+          if (loadout.main_hand.two_handed == "choice") {
+            let oneHanded = { ...loadout };
+            oneHanded.damage = loadout.main_hand.damage.split("/")[0];
+            oneHanded.off_hand = shield;
+
+            let twoHanded = { ...loadout };
+            twoHanded.damage = loadout.main_hand.damage.split("/")[1];
+            twoHanded.off_hand = loadout.main_hand;
+            return [oneHanded, twoHanded];
+          } else {
+            loadout.damage = loadout.main_hand.damage;
+            if (loadout.main_hand.two_handed == "true") {
+              loadout.off_hand = loadout.main_hand;
+            } else {
+              loadout.off_hand = shield;
+            }
+            return [loadout];
+          }
+        })
+        .flatMap(loadout => {
+          if (loadout.main_hand.ranged == "choice") {
+            let melee = { ...loadout };
+            melee.ranged = "false";
+
+            let ranged = { ...loadout };
+            ranged.ranged = "true";
+            return [melee, ranged];
+          } else {
+            loadout.ranged = loadout.main_hand.ranged;
+            return [loadout];
+          }
+        })
+        .map(loadout => {
+          loadout.armor_class =
+            (armor !== undefined ? armor.armor_class : 9) +
+            (loadout.off_hand !== undefined && loadout.off_hand.id == "shield" ? -1 : 0);
+          return loadout;
+        });
+      if (result.length > 0) {
+        return result;
+      }
+      return [{
+        main_hand: {
+          id: "fist",
+          name: "Fist",
+          cost: 0,
+          damage: "1",
+          weight: 0,
+          count: 1,
+          small: "true",
+          two_handed: "false",
+          blunt: "true",
+          ranged: "false",
+        },
+        off_hand: shield,
+        damage: 1,
+        ranged: "false",
+        armor_class:
+          (armor !== undefined ? armor.armor_class : 9) +
+          (shield !== undefined ? -1 : 0),
+      }]
+    }
+
+    function randomizeClass() {
+      const classEl = document.getElementById("class");
+      const num_options = classEl.options.length;
+      classEl.selectedIndex = Math.floor(num_options * Math.random());
+    }
+
+    function randomizeAlignment() {
+      const alignmentEl = document.getElementById("alignment");
+      const num_options = alignmentEl.options.length;
+      alignmentEl.selectedIndex = Math.floor(num_options * Math.random());
+    }
+
+    function randomizeStats() {
+      for (const stat of STATS) {
+        document.getElementById(stat).value = roll(3, 6);
+      }
+    }
+
+    function randomizeStatsSmart() {
+      let rolls = [];
+      for (let i = 0; i < 7; i++) {
+        rolls.push(roll(3, 6));
+      }
+      rolls.sort((a, b) => a - b);
+      rolls.shift();
+
+      const class_ = getClass();
+
+      const tier1 = [...class_.primary_abilities];
+      shuffle(tier1);
+      const tier2 = Object.keys(class_.stat_requirements);
+      shuffle(tier2);
+      const tier3 = [...STATS];
+      shuffle(tier3);
+
+      let result = {};
+      for (const stat of [...tier1, ...tier2, ...tier3]) {
+        if (result[stat] !== undefined) {
+          continue;
+        }
+        result[stat] = rolls.pop();
+      }
+
+      for (const stat of STATS) {
+        document.getElementById(stat).value = result[stat];
+      }
+    }
+
+    function randomizeHitPoints() {
+      const class_ = getClass();
+      const level = getLevel();
+      const conMod = getAbilityModifiers().con;
+
+      const level9 = Math.min(level, 9);
+      let result = roll(level9, class_.hit_die) + level9 * conMod;
+      if (level > 9) {
+        const level10 = level - 9;
+        result += class_.level10_hp_bonus * level10;
+      }
+      result = Math.max(result, 1);
+
+      document.getElementById("hit_points").value = result;
+    }
+
+    function randomizeStartingGold() {
+      document.getElementById("starting_gold").value = 10 * roll(3, 8);
+    }
+
+    function randomizeWeapons() {
+      for (const row of document.querySelectorAll("tr[data-weapon]")) {
+        row.children[4].children[0].value = 0;
+      }
+      for (const row of document.querySelectorAll("tr[data-ammo]")) {
+        row.children[4].children[0].value = 0;
+      }
+      const class_ = getClass();
+
+      let remainingMoney = getRemainingMoney();
+      let weapons = [];
+      for (const weapon of getWeapons()) {
+        if (class_.is_weapon_allowed(weapon) && weapon.total_cost <= remainingMoney) {
+          weapons.push(weapon);
+        }
+      }
+
+      if (weapons.length == 0) {
+        return;
+      }
+
+      const pick1 = weapons[Math.floor(weapons.length * Math.random())];
+      document.querySelector(`tr[data-weapon="${pick1.id}"]`).children[4].children[0].value = 1;
+      if (pick1.ammo !== undefined) {
+        document.querySelector(`tr[data-ammo="${pick1.ammo.id}"]`).children[4].children[0].value = 1;
+      }
+
+      if (Math.random() < 2 / 3) {
+        return;
+      }
+
+      const pick1IsRangedOnly = pick1.ranged == "true";
+      remainingMoney = getRemainingMoney();
+      weapons = [];
+      for (const pick2 of getWeapons()) {
+        const pick2isRangedOnly = pick2.ranged == "true";
+        if (
+          class_.is_weapon_allowed(pick2) &&
+          pick2.total_cost <= remainingMoney &&
+          pick1IsRangedOnly !== pick2isRangedOnly
+        ) {
+          weapons.push(pick2);
+        }
+      }
+
+      if (weapons.length == 0) {
+        return;
+      }
+
+      const pick2 = weapons[Math.floor(weapons.length * Math.random())];
+      document.querySelector(`tr[data-weapon="${pick2.id}"]`).children[4].children[0].value = 1;
+      if (pick2.ammo !== undefined) {
+        document.querySelector(`tr[data-ammo="${pick2.ammo.id}"]`).children[4].children[0].value = 1;
+      }
+    }
+
+    function randomizeArmor() {
+      for (const row of document.querySelectorAll("tr[data-armor]")) {
+        row.children[4].children[0].value = 0;
+      }
+      const shieldEl = document.querySelector(`tr[data-item3="shield"]`)
+      shieldEl.children[4].children[0].value = 0;
+      const class_ = getClass();
+
+      let remainingMoney = getRemainingMoney();
+      let armors = [];
+      for (const armor of getArmors()) {
+        if (class_.is_armor_allowed(armor) && armor.cost <= remainingMoney) {
+          armors.push(armor);
+        }
+      }
+
+      if (armors.length == 0) {
+        return;
+      }
+
+      const pick1 = armors[Math.floor(armors.length * Math.random())];
+      document.querySelector(`tr[data-armor="${pick1.id}"]`).children[4].children[0].value = 1;
+
+      if (Math.random() < 1 / 2) {
+        return;
+      }
+
+      remainingMoney = getRemainingMoney();
+      armors = [];
+      for (const pick2 of getItems().filter(i => i.id == "shield")) {
+        if (class_.is_shield_allowed && pick2.cost <= remainingMoney) {
+          armors.push(pick2);
+        }
+      }
+
+      if (armors.length == 0) {
+        return;
+      }
+
+      shieldEl.children[4].children[0].value = 1;
+    }
+
+    function randomizeAll() {
+      randomizeClass();
+      randomizeAlignment();
+      randomizeStatsSmart();
+      randomizeHitPoints();
+      const startingGoldEl = document.getElementById("starting_gold");
+      startingGoldEl.value = 240;
+      randomizeArmor();
+      randomizeWeapons();
+
+      if (getLoadouts().every(l => l.off_hand == undefined || l.off_hand.id != "shield")) {
+        document.querySelector(`tr[data-item3="shield"]`).children[4].children[0].value = 0;
+      }
+      let remainingMoney = getRemainingMoney();
+      startingGoldEl.value = 240 - remainingMoney / 100;
+    }
+
+    function generate() {
+      // TODO: check errors
+      // - level allowed for class
+      // - weapons allowed for class
+      // - armor allowed for class
+      // - overencumbered
+      // - had enough money
+      // - magic-users have a spell book
+      let result = "";
+
+      const class_ = getClass();
+      const level = getLevel();
+      const alignment = getAlignment();
+      const hitPoints = getHitPoints();
+      result += `<p>${class_.name} LV ${level} AL ${alignment.substr(0, 1).toUpperCase()} HP ${hitPoints}`;
+
+      const loadouts = getLoadouts();
+      const sameArmorClass = loadouts.every(l => l.armor_class == loadouts[0].armor_class);
+      if (sameArmorClass) {
+        result += ` AC ${loadouts[0].armor_class}`;
+      }
+
+      const speed = getMovementSpeed();
+      if (speed == 0) {
+        result += ` MV overencumbered!`;
+      } else {
+        result += ` MV ${speed * 3}' (${speed}')</p>`;
+      }
+
+      const stats = getAbilities();
+      const mods = getAbilityModifiers();
+      result += `<p>`;
+      for (const stat of STATS) {
+        result += ` ${stat.toUpperCase()} ${stats[stat]}`
+        if (mods[stat] != 0) {
+          result += ` (${plusMinus(mods[stat])})`
+        }
+      }
+      result += "</p>"
+
+      const savingThrows = class_.saving_throws(level);
+      result += `<p>SV`;
+      result += ` br. ${savingThrows[0]}`;
+      result += ` po./de. ${savingThrows[1]}`;
+      result += ` pe./pa. ${savingThrows[2]}`;
+      result += ` wa. ${savingThrows[3] - mods.wis}`;
+      result += ` sp. ${savingThrows[4] - mods.wis}`;
+      result += `</p>`;
+
+      result += `<h3>Loadouts</h3><ul>`;
+      for (const loadout of loadouts) {
+        result += `<li>`;
+        result += ` ${loadout.main_hand.name}`;
+        if (loadout.main_hand.ranged == "choice" && loadout.ranged == "true") {
+          result += ` (throw)`;
+        }
+        if (loadout.off_hand === undefined) {
+        } else if (loadout.off_hand.id == loadout.main_hand.id) {
+          result += ` (two-handed)`;
+        } else {
+          result += ` + ${loadout.off_hand.name}`;
+        }
+        result += `: `;
+
+        if (loadout.ranged == "true") {
+          result += ` <span class="tooltip">RG ${loadout.main_hand.short_range}'/${loadout.main_hand.medium_range}'/${loadout.main_hand.long_range}'`;
+          result += `<span class="tooltip-text">when in short/medium/long range, add +1/+0/-1 to hit modifier</span></span>`;
+        }
+
+        let damageMod = "";
+        if (loadout.ranged == "false" && mods.str != 0) {
+          damageMod = `${plusMinus(mods.str)}`
+        }
+        result += ` AV ${loadout.damage}${damageMod}`;
+        if (!sameArmorClass) {
+          result += ` AC ${loadout.armor_class}`;
+        }
+
+        let hitModifier = class_.hit_modifier(level, loadout.ranged);
+        if (loadout.ranged == "true") {
+          hitModifier += mods.dex;
+        } else {
+          hitModifier += mods.str;
+        }
+        result += `<table class="rolls"><tr><th>1d20</th>`;
+        for (let i = 1; i <= 20; i++) {
+          result += `<td>${i}</td>`;
+        }
+        result += `</tr><tr><th>AC</th><td>miss</td>`;
+        for (let i = 2; i <= 19; i++) {
+          result += `<td>${20 - i - hitModifier}</td>`;
+        }
+        result += `<td>hit</td></tr></table>`;
+        result += `</li>`;
+      }
+      result += `</ul>`;
+
+      let languages = ["Common", alignment.toLowerCase()].concat(class_.languages);
+      result += `<h3>Languages and other abilities</h3><ul>`;
+      if (mods.int > 0) {
+        result += `<li>${languages.join(", ")} and ${mods.int} other language${mods.int > 1 ? "s" : ""}</li>`;
+      } else {
+        result += `<li>${languages.slice(0, languages.length - 1).join(", ")} and ${languages[languages.length - 1]} languages</li>`;
+      }
+      for (const ability of class_.abilities(level)) {
+        result += `<li>${ability}</li>`;
+      }
+      result += `</ul>`;
+
+      // TODO: Known & prepared spells
+
+      result += `<h3>Inventory</h3>`;
+      result += `<p>Total weight ${Math.round(10 * getTotalWeight()) / 10} lb.</p>`;
+      result += `<ul>`;
+      for (const weapon of getWeapons().filter(i => i.count > 0)) {
+        result += `<li>${count(weapon.count)}${weapon.name}</li>`;
+        if (weapon.ammo !== undefined) {
+          result += `<li>${count(weapon.ammo.count)}${weapon.ammo.name}</li>`;
+        }
+      }
+      for (const item of [...getArmors(), ...getItems()].filter(i => i.count > 0)) {
+        result += `<li>${count(item.count)}${item.name}</li>`;
+      }
+      let coins = getRemainingCoins();
+      let coinsText = [];
+      for (const coin of ["pp", "gp", "ep", "sp", "cp"]) {
+        if (coins[coin] > 0) {
+          coinsText.push(`${coins[coin]} ${coin}`);
+        }
+      }
+      if (coinsText.length > 0) {
+        result += `<li>${coinsText.join(", ")}</li>`;
+      }
+
+      document.getElementById("result").innerHTML = result;
+    }
+  </script>
+
+  <h1>
+    Labyrinth Lord Character Generator
+    <button onclick="randomizeAll(); generate()" style="font-size: smaller;">randomize all and generate</button>
+  </h1>
+  <hr>
+
+  <h2>
+    Character Sheet
+  </h2>
+  <div id="result"></div>
+  <hr>
+
+  <h2>Parameters</h2>
+  <p>
+    <label for="class">Class:</label>
+    <select id="class">
+      <option value="cleric">Cleric</option>
+      <option value="dwarf">Dwarf</option>
+      <option value="elf">Elf</option>
+      <option value="fighter">Fighter</option>
+      <option value="halfling">Halfling</option>
+      <option value="magic_user">Magic-User</option>
+      <option value="thief">Thief</option>
+    </select>
+    <button onclick="randomizeClass(); generate();">randomize</button>
+    <br>
+
+    <label for="level">Level:</label>
+    <input id="level" type="number" min="0" value="1">
+    <br>
+
+    <label for="alignment">Alignment:</label>
+    <select id="alignment">
+      <option value="law">Law</option>
+      <option value="neutral">Neutral</option>
+      <option value="chaos">Chaos</option>
+    </select>
+    <button onclick="randomizeAlignment(); generate();">randomize</button>
+  </p>
+
+  <p>
+    <label for="str">STR:</label>
+    <input id="str" type="number" min="0">
+    <br>
+
+    <label for="dex">DEX:</label>
+    <input id="dex" type="number" min="0">
+    <br>
+
+    <label for="con">CON:</label>
+    <input id="con" type="number" min="0">
+    <br>
+
+    <label for="int">INT:</label>
+    <input id="int" type="number" min="0">
+    <br>
+
+    <label for="wis">WIS:</label>
+    <input id="wis" type="number" min="0">
+    <br>
+
+    <label for="cha">CHA:</label>
+    <input id="cha" type="number" min="0">
+    <br>
+
+    <button onclick="randomizeStats(); generate();">
+      <span class="tooltip">
+        randomize
+        <span class="tooltip-text">roll 3d6 for each</span>
+      </span>
+    </button>
+
+    <button onclick="randomizeStatsSmart(); generate();">
+      <span class="tooltip">
+        randomize (smart)
+        <span class="tooltip-text">
+          roll 3d6 7 times, discard lowest, distribute to primary, then required, then other abilities
+        </span>
+      </span>
+    </button>
+  </p>
+
+  <p>
+    <label for="hit_points">Hit points:</label>
+    <input id="hit_points" type="number" min="0">
+    <button onclick="randomizeHitPoints(); generate();" value="1">randomize</button>
+  </p>
+
+  <p>
+    <label for="starting_gold">Starting gold:</label>
+    <input id="starting_gold" type="number" min="0" value="0">
+    <button onclick="randomizeStartingGold(); generate();">randomize</button>
+  </p>
+
+  <div class="shop-container">
+    <div class="shop-table">
+      <table>
+        <caption>
+          Weapons
+          <button onclick="randomizeWeapons(); generate();">
+            <span class="tooltip">
+              randomize
+              <span class="tooltip-text">
+                pick one or two weapons compatible with class and cheaper than remaining gold
+              </span>
+            </span>
+          </button>
+        </caption>
+        <tr>
+          <th>Weapon</th>
+          <th>Cost</th>
+          <th>Damage</th>
+          <th>Weight</th>
+          <th>Count</th>
+        </tr>
+        <tr data-weapon="battle_axe" data-weapon-two-handed="true">
+          <td>Axe, battle</td>
+          <td>6 gp</td>
+          <td>1d8</td>
+          <td>6 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="hand_axe" data-weapon-small="true" data-weapon-ranged="choice" data-weapon-short-range="10"
+          data-weapon-medium-range="20" data-weapon-long-range="30">
+          <td>Axe, hand</td>
+          <td>1 gp</td>
+          <td>1d6</td>
+          <td>3 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="club" data-weapon-blunt="true">
+          <td>Club</td>
+          <td>3 gp</td>
+          <td>1d4</td>
+          <td>3 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="heavy_crossbow" data-weapon-two-handed="true" data-weapon-ranged="true"
+          data-weapon-short-range="80" data-weapon-medium-range="160" data-weapon-long-range="240"
+          data-weapon-ammo="heavy_quarrel_case">
+          <td>Crossbow, heavy</td>
+          <td>25 gp</td>
+          <td>1d8</td>
+          <td>8 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-ammo="heavy_quarrel_case">
+          <td>Heavy quarrels (10) and case</td>
+          <td>3 gp</td>
+          <td></td>
+          <td>1 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="light_crossbow" data-weapon-two-handed="true" data-weapon-small="true"
+          data-weapon-ranged="true" data-weapon-short-range="80" data-weapon-medium-range="160"
+          data-weapon-long-range="240" data-weapon-ammo="light_quarrel_case">
+          <td>Crossbow, light</td>
+          <td>16 gp</td>
+          <td>1d6</td>
+          <td>4 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-ammo="light_quarrel_case" data-ammo-for="light_crossbow">
+          <td>Light quarrels (10) and case</td>
+          <td>3 ep</td>
+          <td></td>
+          <td>1 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="dagger" data-weapon-small="true" data-weapon-ranged="choice" data-weapon-short-range="10"
+          data-weapon-medium-range="20" data-weapon-long-range="30">
+          <td>Dagger</td>
+          <td>3 gp</td>
+          <td>1d4</td>
+          <td>1 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="silver_dagger" data-weapon-small="true" data-weapon-ranged="choice"
+          data-weapon-short-range="10" data-weapon-medium-range="20" data-weapon-long-range="30">
+          <td>Dagger, silver</td>
+          <td>30 gp</td>
+          <td>1d4</td>
+          <td>1 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="dart" data-weapon-small="true" data-weapon-ranged="true" data-weapon-short-range="15"
+          data-weapon-medium-range="30" data-weapon-long-range="40">
+          <td>Dart</td>
+          <td>5 sp</td>
+          <td>1d4</td>
+          <td>1/2 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="flail" data-weapon-small="true" data-weapon-blunt="true">
+          <td>Flail</td>
+          <td>3 gp</td>
+          <td>1d6</td>
+          <td>5 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="heavy_flail" data-weapon-two-handed="true" data-weapon-blunt="true">
+          <td>Flail, heavy</td>
+          <td>8 gp</td>
+          <td>1d8</td>
+          <td>10 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="light_hammer" data-weapon-small="true" data-weapon-blunt="true">
+          <td>Hammer, light</td>
+          <td>1 gp</td>
+          <td>1d4</td>
+          <td>2 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="war_hammer" data-weapon-two-handed="true" data-weapon-blunt="true">
+          <td>Hammer, war</td>
+          <td>7 gp</td>
+          <td>1d6</td>
+          <td>5 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="javelin" data-weapon-ranged="true" data-weapon-short-range="20" data-weapon-medium-range="40"
+          data-weapon-long-range="60">
+          <td>Javelin</td>
+          <td>1 gp</td>
+          <td>1d6</td>
+          <td>2 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="lance">
+          <td>Lance</td>
+          <td>7 gp</td>
+          <td>1d6</td>
+          <td>10 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="longbow" data-weapon-two-handed="true" data-weapon-ranged="true" data-weapon-short-range="70"
+          data-weapon-medium-range="140" data-weapon-long-range="210" data-weapon-ammo="quiver_and_arrows_l">
+          <td>Longbow</td>
+          <td>40 gp</td>
+          <td>1d8</td>
+          <td>3 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-ammo="quiver_and_arrows_l">
+          <td>Quiver and arrows (20)</td>
+          <td>5 gp</td>
+          <td></td>
+          <td>3 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="mace" data-weapon-small="true" data-weapon-blunt="true">
+          <td>Mace</td>
+          <td>5 gp</td>
+          <td>1d6</td>
+          <td>3 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="morningstar" data-weapon-two-handed="true" data-weapon-blunt="true">
+          <td>Morningstar</td>
+          <td>5 gp</td>
+          <td>1d6</td>
+          <td>6 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="heavy_pick" data-weapon-two-handed="true">
+          <td>Pick, heavy</td>
+          <td>8 gp</td>
+          <td>1d8</td>
+          <td>6 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="light_pick" data-weapon-small="true">
+          <td>Pick, light</td>
+          <td>5 gp</td>
+          <td>1d6</td>
+          <td>3 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="pole_arm" data-weapon-two-handed="true">
+          <td>Pole Arm</td>
+          <td>7 gp</td>
+          <td>1d10</td>
+          <td>15 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="quarterstaff" data-weapon-two-handed="true" data-weapon-blunt="true">
+          <td>Quarterstaff</td>
+          <td>2 gp</td>
+          <td>1d6</td>
+          <td>4 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="scimitar">
+          <td>Scimitar</td>
+          <td>15 gp</td>
+          <td>1d8</td>
+          <td>4 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="shortbow" data-weapon-two-handed="true" data-weapon-small="true" data-weapon-ranged="true"
+          data-weapon-short-range="50" data-weapon-medium-range="100" data-weapon-long-range="150"
+          data-weapon-ammo="quiver_and_arrows_s">
+          <td>Shortbow</td>
+          <td>25 gp</td>
+          <td>1d6</td>
+          <td>2 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-ammo="quiver_and_arrows_s">
+          <td>Quiver and arrows (20)</td>
+          <td>5 gp</td>
+          <td></td>
+          <td>3 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="sling" data-weapon-two-handed="true" data-weapon-small="true" data-weapon-blunt="true"
+          data-weapon-ranged="true" data-weapon-short-range="40" data-weapon-medium-range="80"
+          data-weapon-long-range="160" data-weapon-ammo="bullets">
+          <td>Sling</td>
+          <td>2 gp</td>
+          <td>1d4</td>
+          <td>0 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-ammo="bullets">
+          <td>Bullets (10)</td>
+          <td>nil</td>
+          <td></td>
+          <td>5 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="spear" data-weapon-ranged="choice" data-weapon-short-range="20" data-weapon-medium-range="40"
+          data-weapon-long-range="60">
+          <td>Spear</td>
+          <td>3 gp</td>
+          <td>1d6</td>
+          <td>6 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="long_sword">
+          <td>Sword, long</td>
+          <td>10 gp</td>
+          <td>1d8</td>
+          <td>4 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="bastard_sword" data-weapon-two-handed="choice">
+          <td>Sword, bastard</td>
+          <td>20 gp</td>
+          <td>1d8/2d4</td>
+          <td>6 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="short_sword" data-weapon-small="true">
+          <td>Sword, short</td>
+          <td>7 gp</td>
+          <td>1d6</td>
+          <td>2 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="two_handed_sword" data-weapon-two-handed="true">
+          <td>Sword, two-handed</td>
+          <td>15 gp</td>
+          <td>1d10</td>
+          <td>15 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-weapon="trident" data-weapon-two-handed="true">
+          <td>Trident</td>
+          <td>4 gp</td>
+          <td>1d6</td>
+          <td>4 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+      </table>
+    </div>
+    <div class="shop-table">
+      <table>
+        <caption>
+          Armor
+          <button onclick="randomizeArmor(); generate();">
+            <span class="tooltip">
+              randomize
+              <span class="tooltip-text">
+                pick an armor and possibly a shield compatible with class and cheaper than remaining gold
+              </span>
+            </span>
+          </button>
+        </caption>
+        <tr>
+          <th>Armor</th>
+          <th>Cost</th>
+          <th>Armor Class</th>
+          <th>Weight</th>
+          <th>Count</th>
+        </tr>
+        <tr data-armor="banded_mail">
+          <td>Banded mail</td>
+          <td>85 gp</td>
+          <td>4</td>
+          <td>35 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-armor="chain_mail">
+          <td>Chain mail</td>
+          <td>70 gp</td>
+          <td>5</td>
+          <td>30 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-item3="helmet">
+          <td>Helmet</td>
+          <td>10 gp</td>
+          <td>-</td>
+          <td>5 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-item3="horse_barding">
+          <td>Horse barding</td>
+          <td>150 gp</td>
+          <td>5</td>
+          <td>60 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-armor="leather" data-armor-leather="true">
+          <td>Leather</td>
+          <td>6 gp</td>
+          <td>8</td>
+          <td>15 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-armor="padded" data-armor-leather="true">
+          <td>Padded</td>
+          <td>4 gp</td>
+          <td>8</td>
+          <td>10 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-armor="plate_mail">
+          <td>Plate mail</td>
+          <td>450 gp</td>
+          <td>3</td>
+          <td>50 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-armor="scale_mail">
+          <td>Scale mail</td>
+          <td>50 gp</td>
+          <td>6</td>
+          <td>40 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-item3="shield">
+          <td>Shield</td>
+          <td>10 gp</td>
+          <td>1 less</td>
+          <td>10 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-armor="splint_mail">
+          <td>Splint mail</td>
+          <td>75 gp</td>
+          <td>4</td>
+          <td>45 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+        <tr data-armor="studded_leather" data-armor-leather="true">
+          <td>Studded leather</td>
+          <td>30 gp</td>
+          <td>7</td>
+          <td>20 lb.</td>
+          <td><input type="number" min="0" value="0"></td>
+        </tr>
+      </table>
+      <!-- TODO: other items -->
+    </div>
+  </div>
+  <script>
+    for (const el of document.querySelectorAll("input, select")) {
+      el.addEventListener("change", generate);
+    }
+    generate();
+  </script>
+</body>
+
+</html>
