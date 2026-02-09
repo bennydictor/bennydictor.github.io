@@ -213,8 +213,11 @@
         hit_die: 8,
         max_level: 12,
         level10_hp_bonus: 3,
-        // TODO: allowed to use bows?
-        is_weapon_allowed: w => w.id == "shortbow" || w.two_handed != "true",
+        is_weapon_allowed: w =>
+          w.id == "shortbow" ||
+          w.id == "light_crossbow" ||
+          w.id == "heavy_crossbow" ||
+          w.two_handed != "true",
         is_armor_allowed: () => true,
         is_shield_allowed: true,
         saving_throws: (level) => {
@@ -417,7 +420,11 @@
         primary_abilities: ["str", "dex"],
         hit_die: 6,
         max_level: 8,
-        is_weapon_allowed: w => w.small == "true",
+        is_weapon_allowed: w =>
+          w.id == "shortbow" ||
+          w.id == "light_crossbow" ||
+          w.id == "heavy_crossbow" ||
+          w.two_handed != "true",
         is_armor_allowed: () => true,
         is_shield_allowed: true,
         saving_throws: (level) => {
@@ -828,7 +835,7 @@
           armor_class: parseInt(row.children[2].innerText),
           weight: parseWeight(row.children[3].innerText),
           count: parseInt(row.children[4].children[0].value),
-          leather: row.getAttribute("data-weapon-leather") ?? "false",
+          leather: row.getAttribute("data-armor-leather") ?? "false",
         });
       }
       return result;
@@ -908,6 +915,7 @@
     }
 
     function getLoadouts() {
+      const class_ = getClass();
       const armor = getBestEquippedArmor();
       const shield = getEquippedShield();
       const result = getWeapons().filter(w => w.count > 0).map(w => { return { main_hand: w }; })
@@ -916,11 +924,15 @@
             let oneHanded = { ...loadout };
             oneHanded.damage = loadout.main_hand.damage.split("/")[0];
             oneHanded.off_hand = shield;
+            let thResult = [oneHanded];
 
-            let twoHanded = { ...loadout };
-            twoHanded.damage = loadout.main_hand.damage.split("/")[1];
-            twoHanded.off_hand = loadout.main_hand;
-            return [oneHanded, twoHanded];
+            if (class_.id != "dwarf" && class_.id != "halfling") {
+              let twoHanded = { ...loadout };
+              twoHanded.damage = loadout.main_hand.damage.split("/")[1];
+              twoHanded.off_hand = loadout.main_hand;
+              thResult.push(twoHanded);
+            }
+            return thResult;
           } else {
             loadout.damage = loadout.main_hand.damage;
             if (loadout.main_hand.two_handed == "true") {
@@ -1418,7 +1430,7 @@
           <td>6 lb.</td>
           <td><input type="number" min="0" value="0"></td>
         </tr>
-        <tr data-weapon="hand_axe" data-weapon-small="true" data-weapon-ranged="choice" data-weapon-short-range="10"
+        <tr data-weapon="hand_axe" data-weapon-ranged="choice" data-weapon-short-range="10"
           data-weapon-medium-range="20" data-weapon-long-range="30">
           <td>Axe, hand</td>
           <td>1 gp</td>
@@ -1449,9 +1461,9 @@
           <td>1 lb.</td>
           <td><input type="number" min="0" value="0"></td>
         </tr>
-        <tr data-weapon="light_crossbow" data-weapon-two-handed="true" data-weapon-small="true"
-          data-weapon-ranged="true" data-weapon-short-range="80" data-weapon-medium-range="160"
-          data-weapon-long-range="240" data-weapon-ammo="light_quarrel_case">
+        <tr data-weapon="light_crossbow" data-weapon-two-handed="true" data-weapon-ranged="true"
+          data-weapon-short-range="80" data-weapon-medium-range="160" data-weapon-long-range="240"
+          data-weapon-ammo="light_quarrel_case">
           <td>Crossbow, light</td>
           <td>16 gp</td>
           <td>1d6</td>
@@ -1481,7 +1493,7 @@
           <td>1 lb.</td>
           <td><input type="number" min="0" value="0"></td>
         </tr>
-        <tr data-weapon="dart" data-weapon-small="true" data-weapon-ranged="true" data-weapon-short-range="15"
+        <tr data-weapon="dart" data-weapon-ranged="true" data-weapon-short-range="15"
           data-weapon-medium-range="30" data-weapon-long-range="40">
           <td>Dart</td>
           <td>5 sp</td>
@@ -1489,7 +1501,7 @@
           <td>1/2 lb.</td>
           <td><input type="number" min="0" value="0"></td>
         </tr>
-        <tr data-weapon="flail" data-weapon-small="true" data-weapon-blunt="true">
+        <tr data-weapon="flail" data-weapon-blunt="true">
           <td>Flail</td>
           <td>3 gp</td>
           <td>1d6</td>
@@ -1503,7 +1515,7 @@
           <td>10 lb.</td>
           <td><input type="number" min="0" value="0"></td>
         </tr>
-        <tr data-weapon="light_hammer" data-weapon-small="true" data-weapon-blunt="true">
+        <tr data-weapon="light_hammer" data-weapon-blunt="true">
           <td>Hammer, light</td>
           <td>1 gp</td>
           <td>1d4</td>
@@ -1547,7 +1559,7 @@
           <td>3 lb.</td>
           <td><input type="number" min="0" value="0"></td>
         </tr>
-        <tr data-weapon="mace" data-weapon-small="true" data-weapon-blunt="true">
+        <tr data-weapon="mace" data-weapon-blunt="true">
           <td>Mace</td>
           <td>5 gp</td>
           <td>1d6</td>
@@ -1568,7 +1580,7 @@
           <td>6 lb.</td>
           <td><input type="number" min="0" value="0"></td>
         </tr>
-        <tr data-weapon="light_pick" data-weapon-small="true">
+        <tr data-weapon="light_pick">
           <td>Pick, light</td>
           <td>5 gp</td>
           <td>1d6</td>
@@ -1596,9 +1608,8 @@
           <td>4 lb.</td>
           <td><input type="number" min="0" value="0"></td>
         </tr>
-        <tr data-weapon="shortbow" data-weapon-two-handed="true" data-weapon-small="true" data-weapon-ranged="true"
-          data-weapon-short-range="50" data-weapon-medium-range="100" data-weapon-long-range="150"
-          data-weapon-ammo="quiver_and_arrows_s">
+        <tr data-weapon="shortbow" data-weapon-two-handed="true" data-weapon-ranged="true" data-weapon-short-range="50"
+          data-weapon-medium-range="100" data-weapon-long-range="150" data-weapon-ammo="quiver_and_arrows_s">
           <td>Shortbow</td>
           <td>25 gp</td>
           <td>1d6</td>
@@ -1650,7 +1661,7 @@
           <td>6 lb.</td>
           <td><input type="number" min="0" value="0"></td>
         </tr>
-        <tr data-weapon="short_sword" data-weapon-small="true">
+        <tr data-weapon="short_sword">
           <td>Sword, short</td>
           <td>7 gp</td>
           <td>1d6</td>
