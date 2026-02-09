@@ -998,9 +998,20 @@
     }
 
     function randomizeAlignment() {
+      const class_ = getClass();
       const alignmentEl = document.getElementById("alignment");
-      const num_options = alignmentEl.options.length;
-      alignmentEl.selectedIndex = Math.floor(num_options * Math.random());
+      let option;
+      if (Math.random() < 1/10) {
+        option = 2; // chaos
+      } else if (Math.random() < 1/3) {
+        option = 0; // law
+      } else {
+        option = 1; // neutral
+      }
+      if (class_.id == "thief") {
+        option = 2 - option;
+      }
+      alignmentEl.selectedIndex = option;
     }
 
     function randomizeStats() {
@@ -1499,8 +1510,8 @@
           <td>1 lb.</td>
           <td><input type="number" min="0" value="0"></td>
         </tr>
-        <tr data-weapon="dart" data-weapon-ranged="true" data-weapon-short-range="15"
-          data-weapon-medium-range="30" data-weapon-long-range="40">
+        <tr data-weapon="dart" data-weapon-ranged="true" data-weapon-short-range="15" data-weapon-medium-range="30"
+          data-weapon-long-range="40">
           <td>Dart</td>
           <td>5 sp</td>
           <td>1d4</td>
